@@ -80,40 +80,37 @@ from
 			var dataDb1NotAppliedMigrationSqls = exceptDataDbAppliedMigrationSqls.Except(actualDataDb1AppliedMigrationSqls).ToList();
 			var dataDb2NotAppliedMigrationSqls = exceptDataDbAppliedMigrationSqls.Except(actualDataDb2AppliedMigrationSqls).ToList();
 
-			if (commonDbNotAppliedMigrationSqls.Any() || dataDb1NotAppliedMigrationSqls.Any() || dataDb2NotAppliedMigrationSqls.Any())
+			using (var httpClient = new HttpClient())
 			{
-				using (var httpClient = new HttpClient())
+				const string notAppliedMigrationSqlNotFoundMessage = "未適用の migration SQL はありません。";
+				var postJson = JsonConvert.SerializeObject(new
 				{
-					const string notAppliedMigrationSqlNotFoundMessage = "未適用の migration SQL はありません。";
-					var postJson = JsonConvert.SerializeObject(new
+					text =
+					$@"{
+							(options.DryRun ? "`@nux-dev`" : "<!subteam^S2WPQQU2F|nux-dev>")
+						} 未適用の migration SQL が存在してます。適用するか、既に適用済みであれば、 migrated_file_name を正しいものに更新してくださいね。更新しなかったら…どうなるか分かりますよね :question: :fire: :snake: ",
+					attachments = new[]
 					{
-						text =
-						$@"{
-								(options.DryRun ? "`@nux-dev`" : "<!subteam^S2WPQQU2F|nux-dev>")
-							} 未適用の migration SQL が存在してます。適用するか、既に適用済みであれば、 migrated_file_name を正しいものに更新してくださいね。更新しなかったら…どうなるか分かりますよね :question: :fire: :snake: ",
-						attachments = new[]
+						new
 						{
-							new
-							{
-								text = $"---- {commonDbConnectionStringBuilder.Database} ----"
-								       + Environment.NewLine
-								       + (commonDbNotAppliedMigrationSqls.Any() ? string.Join(Environment.NewLine, commonDbNotAppliedMigrationSqls) : notAppliedMigrationSqlNotFoundMessage)
-								       + Environment.NewLine
-								       + $"---- {dataDb1ConnectionStringBuilder.Database} ----"
-								       + Environment.NewLine
-								       + (dataDb1NotAppliedMigrationSqls.Any() ? string.Join(Environment.NewLine, dataDb1NotAppliedMigrationSqls) : notAppliedMigrationSqlNotFoundMessage)
-								       + Environment.NewLine
-								       + $"---- {dataDb2ConnectionStringBuilder.Database} ----"
-								       + Environment.NewLine
-								       + (dataDb2NotAppliedMigrationSqls.Any() ? string.Join(Environment.NewLine, dataDb2NotAppliedMigrationSqls) : notAppliedMigrationSqlNotFoundMessage)
-							}
+							text = $"---- {commonDbConnectionStringBuilder.Database} ----"
+							       + Environment.NewLine
+							       + (commonDbNotAppliedMigrationSqls.Any() ? string.Join(Environment.NewLine, commonDbNotAppliedMigrationSqls) : notAppliedMigrationSqlNotFoundMessage)
+							       + Environment.NewLine
+							       + $"---- {dataDb1ConnectionStringBuilder.Database} ----"
+							       + Environment.NewLine
+							       + (dataDb1NotAppliedMigrationSqls.Any() ? string.Join(Environment.NewLine, dataDb1NotAppliedMigrationSqls) : notAppliedMigrationSqlNotFoundMessage)
+							       + Environment.NewLine
+							       + $"---- {dataDb2ConnectionStringBuilder.Database} ----"
+							       + Environment.NewLine
+							       + (dataDb2NotAppliedMigrationSqls.Any() ? string.Join(Environment.NewLine, dataDb2NotAppliedMigrationSqls) : notAppliedMigrationSqlNotFoundMessage)
 						}
-					});
-
-					using (var content = new StringContent(postJson, Encoding.UTF8, "application/json"))
-					{
-						httpClient.PostAsync(options.SlackWebhookUrl, content).Wait();
 					}
+				});
+
+				using (var content = new StringContent(postJson, Encoding.UTF8, "application/json"))
+				{
+					httpClient.PostAsync(options.SlackWebhookUrl, content).Wait();
 				}
 			}
 
