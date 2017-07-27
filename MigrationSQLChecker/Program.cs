@@ -83,12 +83,14 @@ from
 			using (var httpClient = new HttpClient())
 			{
 				const string notAppliedMigrationSqlNotFoundMessage = "未適用の migration SQL はありません。";
+				var allNodeMigrated =
+					!commonDbNotAppliedMigrationSqls.Any()
+					&& !dataDb1NotAppliedMigrationSqls.Any()
+					&& !dataDb2NotAppliedMigrationSqls.Any();
 				var postJson = JsonConvert.SerializeObject(new
 				{
 					text =
-					$@"{
-							(options.DryRun ? "`@nux-dev`" : "<!subteam^S2WPQQU2F|nux-dev>")
-						} 未適用の migration SQL が存在してます。適用するか、既に適用済みであれば、 migrated_file_name を正しいものに更新してくださいね。更新しなかったら…どうなるか分かりますよね :question: :fire: :snake: ",
+					$@"{(options.DryRun || allNodeMigrated ? "`@nux-dev`" : "<!subteam^S2WPQQU2F|nux-dev>")} migration SQL の確認完了しました :eyes: {Environment.NewLine}未適用の migration SQL がある場合、適用するか、既に適用済みであれば、 migrated_file_name を正しいものに更新してくださいね :heart: {Environment.NewLine}更新しなかったら…どうなるか分かりますよね :question: :fire: :snake: ",
 					attachments = new[]
 					{
 						new
