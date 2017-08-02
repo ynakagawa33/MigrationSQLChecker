@@ -20,6 +20,9 @@ namespace MigrationSQLChecker
 		private const string NewsDbNodeIdentifier = "news";
 		private const string DemoDbNodeIdentifier = "demo";
 
+		private static readonly Regex MigrationSqlRegex =
+			new Regex($@"(.{{8}})(_|-)(.{{2}})(_|-)({AllNodeIdentifier}|{CommonDbNodeIdentifier}|{NewsDbNodeIdentifier}|{DataDbNodeIdentifier}|{DemoDbNodeIdentifier})(_|-)");
+
 		private static readonly Regex CommonDbAppliedMigrationSqlRegex =
 			new Regex($@".{{8}}(_|-).{{2}}(_|-)({AllNodeIdentifier}|{CommonDbNodeIdentifier}|{NewsDbNodeIdentifier})(_|-)");
 
@@ -80,36 +83,76 @@ from
 			var dataDb1NotAppliedMigrationSqls = expectedDataDbAppliedMigrationSqls.Except(actualDataDb1AppliedMigrationSqls).ToList();
 			var dataDb2NotAppliedMigrationSqls = expectedDataDbAppliedMigrationSqls.Except(actualDataDb2AppliedMigrationSqls).ToList();
 
+			var notAppliedMigrationSqlsGropedByDate =
+				commonDbNotAppliedMigrationSqls
+					.Union(dataDb1NotAppliedMigrationSqls)
+					.Union(dataDb2NotAppliedMigrationSqls)
+					.GroupBy(s => MigrationSqlRegex.Match(s).Groups[1].Captures[0].Value)
+					.OrderBy(grouping => grouping.Key)
+					.ToList();
 
-
-			using (var httpClient = new HttpClient())
+			var attachments = new List<dynamic>();
+			const string notAppliedMigrationSqlNotFoundMessage = "未適用の migration SQL はありません。";
+			foreach (var notAppliedMigrationSqlGropedByDate in notAppliedMigrationSqlsGropedByDate)
 			{
-				const string notAppliedMigrationSqlNotFoundMessage = "未適用の migration SQL はありません。";
-				var allNodeMigrated =
-					!commonDbNotAppliedMigrationSqls.Any()
-					&& !dataDb1NotAppliedMigrationSqls.Any()
-					&& !dataDb2NotAppliedMigrationSqls.Any();
-				var postJson = JsonConvert.SerializeObject(new
+				var commonDbFieldValueSources = notAppliedMigrationSqlGropedByDate
+					.Where(s => commonDbNotAppliedMigrationSqls.Contains(s))
+					.OrderBy(s => s)
+					.ToList();
+				var dataDb1FieldValueSources = notAppliedMigrationSqlGropedByDate
+					.Where(s => dataDb1NotAppliedMigrationSqls.Contains(s))
+					.OrderBy(s => s)
+					.ToList();
+				var dataDb2FieldValueSources = notAppliedMigrationSqlGropedByDate
+					.Where(s => dataDb2NotAppliedMigrationSqls.Contains(s))
+					.OrderBy(s => s)
+					.ToList();
+				attachments.Add(new
 				{
-					text =
-					$@"{(options.DryRun || allNodeMigrated ? "`@nux-dev`" : "<!subteam^S2WPQQU2F|nux-dev>")} migration SQL の確認完了しました :eyes: {Environment.NewLine}未適用の migration SQL がある場合、適用するか、既に適用済みであれば、 migrated_file_name を正しいものに更新してくださいね :heart: {Environment.NewLine}更新しなかったら…どうなるか分かりますよね :question: :fire: :snake: ",
-					attachments = new[]
+					title = notAppliedMigrationSqlGropedByDate.Key + " 未適用の migration SQL",
+					color = "warning",
+					text = string.Join(Environment.NewLine, notAppliedMigrationSqlGropedByDate.OrderBy(s => s)) + Environment.NewLine
+					       + Environment.NewLine
+					       + "---- 各 DB の適用状況 ----",
+					fields = new[]
 					{
 						new
 						{
-							text = $"---- {commonDbConnectionStringBuilder.Database} ----"
-							       + Environment.NewLine
-							       + (commonDbNotAppliedMigrationSqls.Any() ? string.Join(Environment.NewLine, commonDbNotAppliedMigrationSqls) : notAppliedMigrationSqlNotFoundMessage)
-							       + Environment.NewLine
-							       + $"---- {dataDb1ConnectionStringBuilder.Database} ----"
-							       + Environment.NewLine
-							       + (dataDb1NotAppliedMigrationSqls.Any() ? string.Join(Environment.NewLine, dataDb1NotAppliedMigrationSqls) : notAppliedMigrationSqlNotFoundMessage)
-							       + Environment.NewLine
-							       + $"---- {dataDb2ConnectionStringBuilder.Database} ----"
-							       + Environment.NewLine
-							       + (dataDb2NotAppliedMigrationSqls.Any() ? string.Join(Environment.NewLine, dataDb2NotAppliedMigrationSqls) : notAppliedMigrationSqlNotFoundMessage)
+							title = commonDbConnectionStringBuilder.Database,
+							value = commonDbFieldValueSources.Any()
+								? string.Join(Environment.NewLine, commonDbFieldValueSources)
+								: notAppliedMigrationSqlNotFoundMessage,
+							@short = true
+						},
+						new
+						{
+							title = dataDb1ConnectionStringBuilder.Database,
+							value = dataDb1FieldValueSources.Any()
+								? string.Join(Environment.NewLine, dataDb1FieldValueSources)
+								: notAppliedMigrationSqlNotFoundMessage,
+							@short = true
+						},
+						new
+						{
+							title = dataDb2ConnectionStringBuilder.Database,
+							value = dataDb2FieldValueSources.Any()
+								? string.Join(Environment.NewLine, dataDb2FieldValueSources)
+								: notAppliedMigrationSqlNotFoundMessage,
+							@short = true
 						}
-					}
+					},
+					mrkdwn_in = new[] {"text"}
+				});
+			}
+
+			using (var httpClient = new HttpClient())
+			{
+				
+				var postJson = JsonConvert.SerializeObject(new
+				{
+					text =
+					$@"{(options.DryRun || !notAppliedMigrationSqlsGropedByDate.Any() ? "`@nux-dev`" : "<!subteam^S2WPQQU2F|nux-dev>")} migration SQL の確認完了しました :eyes: {Environment.NewLine}未適用の migration SQL がある場合、適用するか、既に適用済みであれば、 migrated_file_name を正しいものに更新してくださいね :heart: {Environment.NewLine}更新しなかったら…どうなるか分かりますよね :question: :fire: :snake: ",
+					attachments
 				});
 
 				using (var content = new StringContent(postJson, Encoding.UTF8, "application/json"))
