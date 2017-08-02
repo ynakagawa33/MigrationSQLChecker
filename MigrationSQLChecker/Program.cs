@@ -50,9 +50,9 @@ from
 			var migrationSqls = directoryInfo.GetFiles("*.sql", SearchOption.TopDirectoryOnly)
 				.Select(fileInfo => fileInfo.Name)
 				.ToList();
-			var exceptCommonDbAppliedMigrationSqls =
+			var expectedCommonDbAppliedMigrationSqls =
 				migrationSqls.Where(fileName => CommonDbAppliedMigrationSqlRegex.IsMatch(fileName));
-			var exceptDataDbAppliedMigrationSqls =
+			var expectedDataDbAppliedMigrationSqls =
 				migrationSqls
 					.Where(fileName => DataDbAppliedMigrationSqlRegex.IsMatch(fileName))
 					.ToList();
@@ -76,9 +76,11 @@ from
 				actualDataDb2AppliedMigrationSqls = dataDbConnection.Query<string>(FindMigratedFileNameSql);
 			}
 
-			var commonDbNotAppliedMigrationSqls = exceptCommonDbAppliedMigrationSqls.Except(actualCommonDbAppliedMigrationSqls).ToList();
-			var dataDb1NotAppliedMigrationSqls = exceptDataDbAppliedMigrationSqls.Except(actualDataDb1AppliedMigrationSqls).ToList();
-			var dataDb2NotAppliedMigrationSqls = exceptDataDbAppliedMigrationSqls.Except(actualDataDb2AppliedMigrationSqls).ToList();
+			var commonDbNotAppliedMigrationSqls = expectedCommonDbAppliedMigrationSqls.Except(actualCommonDbAppliedMigrationSqls).ToList();
+			var dataDb1NotAppliedMigrationSqls = expectedDataDbAppliedMigrationSqls.Except(actualDataDb1AppliedMigrationSqls).ToList();
+			var dataDb2NotAppliedMigrationSqls = expectedDataDbAppliedMigrationSqls.Except(actualDataDb2AppliedMigrationSqls).ToList();
+
+
 
 			using (var httpClient = new HttpClient())
 			{
