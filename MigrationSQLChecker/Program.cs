@@ -147,11 +147,21 @@ from
 
 			using (var httpClient = new HttpClient())
 			{
-				
+				string text;
+				if (notAppliedMigrationSqlsGropedByDate.Any())
+				{
+					text = "<!subteam^S2WPQQU2F|nux-dev> migration SQL の確認完了しました :eyes: " + Environment.NewLine
+						+ "未適用の migration SQL がある場合、適用するか、既に適用済みであれば、 migrated_file_name を正しいものに更新してくださいね :heart: " + Environment.NewLine
+						+ "更新しなかったら…どうなるか分かりますよね :question: :fire: :snake: ";
+				}
+				else
+				{
+					text = "`@nux-dev` migration SQL の確認完了しました :eyes: " + Environment.NewLine
+					       + "全て適用済みです。流石ですね :exclamation: ますたぁ :heart: ";
+				}
 				var postJson = JsonConvert.SerializeObject(new
 				{
-					text =
-					$@"{(options.DryRun || !notAppliedMigrationSqlsGropedByDate.Any() ? "`@nux-dev`" : "<!subteam^S2WPQQU2F|nux-dev>")} migration SQL の確認完了しました :eyes: {Environment.NewLine}未適用の migration SQL がある場合、適用するか、既に適用済みであれば、 migrated_file_name を正しいものに更新してくださいね :heart: {Environment.NewLine}更新しなかったら…どうなるか分かりますよね :question: :fire: :snake: ",
+					text,
 					attachments
 				});
 
