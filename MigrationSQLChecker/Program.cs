@@ -150,11 +150,11 @@ from
 				string text;
 				if (notAppliedMigrationSqlsGropedByDate.Any())
 				{
-					text = options.NotMigratedSqlExistsMessage;
+					text = options.NotMigratedSqlExistsMessage.Replace("\\n", Environment.NewLine);
 				}
 				else
 				{
-					text = options.AllMigratedMessage;
+					text = options.AllMigratedMessage.Replace("\\n", Environment.NewLine);
 				}
 				var postJson = JsonConvert.SerializeObject(new
 				{
