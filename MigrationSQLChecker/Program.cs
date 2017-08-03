@@ -148,14 +148,29 @@ from
 			using (var httpClient = new HttpClient())
 			{
 				string text;
+				var defaultNotMigratedSqlExistsMessage = string.Empty;
+				var defaultAllMigratedMessage = string.Empty;
+				foreach (var propertyInfo in typeof(Options).GetProperties())
+				{
+					if (propertyInfo.Name == nameof(Options.NotMigratedSqlExistsMessage))
+					{
+						var optionAttribute = (OptionAttribute) propertyInfo.GetCustomAttributes(typeof(OptionAttribute), false).Single();
+						defaultNotMigratedSqlExistsMessage = (string) optionAttribute.DefaultValue;
+					}
+					if (propertyInfo.Name == nameof(Options.AllMigratedMessage))
+					{
+						var optionAttribute = (OptionAttribute) propertyInfo.GetCustomAttributes(typeof(OptionAttribute), false).Single();
+						defaultAllMigratedMessage = (string) optionAttribute.DefaultValue;
+					}
+				}
 				if (notAppliedMigrationSqlsGropedByDate.Any())
-				{
-					text = options.NotMigratedSqlExistsMessage.Replace("\\n", Environment.NewLine);
-				}
+					text = string.IsNullOrEmpty(options.NotMigratedSqlExistsMessage)
+						? defaultNotMigratedSqlExistsMessage
+						: options.NotMigratedSqlExistsMessage.Replace("\\n", Environment.NewLine);
 				else
-				{
-					text = options.AllMigratedMessage.Replace("\\n", Environment.NewLine);
-				}
+					text = string.IsNullOrEmpty(options.AllMigratedMessage)
+						? defaultAllMigratedMessage
+						: options.AllMigratedMessage.Replace("\\n", Environment.NewLine);
 				var postJson = JsonConvert.SerializeObject(new
 				{
 					text,
