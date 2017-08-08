@@ -113,7 +113,7 @@ from
 					color = "warning",
 					text = string.Join(Environment.NewLine, notAppliedMigrationSqlGropedByDate.OrderBy(s => s)) + Environment.NewLine
 					       + Environment.NewLine
-					       + "---- 各 DB の適用状況 ----",
+					       + $"---- 各 DB の適用状況 ({options.DbHost}) ----",
 					fields = new[]
 					{
 						new
