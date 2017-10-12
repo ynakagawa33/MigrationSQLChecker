@@ -19,7 +19,7 @@ namespace MigrationSQLChecker
 		[Option('s', "slackWebhookUrl", DefaultValue = null, HelpText = "未適用の migration SQL の一覧をポストするための Webhook Url を指定します。未指定の場合、 Slack への投稿は実行されません。")]
 		public string SlackWebhookUrl { get; set; }
 
-		[Option('n', "notMigratedSqlExistsMessage", DefaultValue = "<!here|here> migration SQL の確認完了しました :eyes: \n未適用の migration SQL がある場合、適用してください。\n既に適用済みであれば、ファイル名と migrated_file_name が同値であるか確認し、適切に変更してください。\n", HelpText = "未適用の migration SQL が存在している場合のメッセージを指定します。未指定の場合、 デフォルトのメッセージが選択されます。")]
+		[Option('n', "notMigratedSqlExistsMessage", DefaultValue = "<!here|here> 未適用の migration SQL を適用してください :no_good: \n既に適用済みであれば、ファイル名と migrated_file_name が同値であるか確認し、適切に変更してください。\n", HelpText = "未適用の migration SQL が存在している場合のメッセージを指定します。未指定の場合、 デフォルトのメッセージが選択されます。")]
 		public string NotMigratedSqlExistsMessage { get; set; }
 
 		[Option('a', "allMigratedMessage", DefaultValue = "`@here` migration SQL の確認完了しました :eyes: \n全て適用済みです。", HelpText = "全ての migration SQL が適用済みの場合のメッセージを指定します。未指定の場合、 デフォルトのメッセージが選択されます。")]
