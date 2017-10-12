@@ -94,7 +94,6 @@ from
 					.ToList();
 
 			var attachments = new List<dynamic>();
-			const string notAppliedMigrationSqlNotFoundMessage = "未適用の migration SQL はありません。";
 			foreach (var notAppliedMigrationSqlGropedByDate in notAppliedMigrationSqlsGropedByDate)
 			{
 				var commonDbFieldValueSources = notAppliedMigrationSqlGropedByDate
@@ -109,42 +108,37 @@ from
 					.Where(s => dataDb2NotAppliedMigrationSqls.Contains(s))
 					.OrderBy(s => s)
 					.ToList();
-				attachments.Add(new
+
+				if (commonDbFieldValueSources.Any())
 				{
-					title = notAppliedMigrationSqlGropedByDate.Key + " 未適用の migration SQL",
-					color = "warning",
-					text = string.Join(Environment.NewLine, notAppliedMigrationSqlGropedByDate.OrderBy(s => s)) + Environment.NewLine
-					       + Environment.NewLine
-					       + $"---- 各 DB の適用状況 ({options.DbHost}) ----",
-					fields = new[]
+					attachments.Add(new
 					{
-						new
-						{
-							title = commonDbConnectionStringBuilder.Database,
-							value = commonDbFieldValueSources.Any()
-								? string.Join(Environment.NewLine, commonDbFieldValueSources)
-								: notAppliedMigrationSqlNotFoundMessage,
-							@short = true
-						},
-						new
-						{
-							title = dataDb1ConnectionStringBuilder.Database,
-							value = dataDb1FieldValueSources.Any()
-								? string.Join(Environment.NewLine, dataDb1FieldValueSources)
-								: notAppliedMigrationSqlNotFoundMessage,
-							@short = true
-						},
-						new
-						{
-							title = dataDb2ConnectionStringBuilder.Database,
-							value = dataDb2FieldValueSources.Any()
-								? string.Join(Environment.NewLine, dataDb2FieldValueSources)
-								: notAppliedMigrationSqlNotFoundMessage,
-							@short = true
-						}
-					},
-					mrkdwn_in = new[] {"text"}
-				});
+						color = "danger",
+						title = commonDbConnectionStringBuilder.Database,
+						text = string.Join(Environment.NewLine, commonDbFieldValueSources.Select(s => $"`{s}`")),
+						mrkdwn_in = new[] { "text" }
+					});
+				}
+				if (dataDb1FieldValueSources.Any())
+				{
+					attachments.Add(new
+					{
+						color = "danger",
+						title = dataDb1ConnectionStringBuilder.Database,
+						text = string.Join(Environment.NewLine, dataDb1FieldValueSources.Select(s => $"`{s}`")),
+						mrkdwn_in = new[] { "text" }
+					});
+				}
+				if (dataDb2FieldValueSources.Any())
+				{
+					attachments.Add(new
+					{
+						color = "danger",
+						title = dataDb2ConnectionStringBuilder.Database,
+						text = string.Join(Environment.NewLine, dataDb2FieldValueSources.Select(s => $"`{s}`")),
+						mrkdwn_in = new[] { "text" }
+					});
+				}
 			}
 
 			using (var httpClient = new HttpClient())
@@ -169,6 +163,9 @@ from
 						var mentionText = MentionRegex.Match(text).Groups[2].Captures[0].Value;
 						text = MentionRegex.Replace(text, $"`@{mentionText}` ");
 					}
+
+					text += $" ({options.DbHost})";
+
 					var postJson = JsonConvert.SerializeObject(new
 					{
 						text,
