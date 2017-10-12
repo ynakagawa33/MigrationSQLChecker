@@ -29,6 +29,8 @@ namespace MigrationSQLChecker
 		private static readonly Regex DataDbAppliedMigrationSqlRegex =
 			new Regex($@".{{8}}(_|-).{{2}}(_|-)({AllNodeIdentifier}|{DataDbNodeIdentifier}|{DemoDbNodeIdentifier})(_|-)");
 
+		private static readonly Regex MentionRegex = new Regex(@"<!(.*)\|(.*)> ");
+
 		private static readonly string FindMigratedFileNameSql = @"
 select
 	migrated_file_name
@@ -147,9 +149,7 @@ from
 
 			using (var httpClient = new HttpClient())
 			{
-				string text;
 				var defaultNotMigratedSqlExistsMessage = string.Empty;
-				var defaultAllMigratedMessage = string.Empty;
 				foreach (var propertyInfo in typeof(Options).GetProperties())
 				{
 					if (propertyInfo.Name == nameof(Options.NotMigratedSqlExistsMessage))
@@ -157,29 +157,28 @@ from
 						var optionAttribute = (OptionAttribute) propertyInfo.GetCustomAttributes(typeof(OptionAttribute), false).Single();
 						defaultNotMigratedSqlExistsMessage = (string) optionAttribute.DefaultValue;
 					}
-					if (propertyInfo.Name == nameof(Options.AllMigratedMessage))
-					{
-						var optionAttribute = (OptionAttribute) propertyInfo.GetCustomAttributes(typeof(OptionAttribute), false).Single();
-						defaultAllMigratedMessage = (string) optionAttribute.DefaultValue;
-					}
 				}
 				if (notAppliedMigrationSqlsGropedByDate.Any())
-					text = string.IsNullOrEmpty(options.NotMigratedSqlExistsMessage)
+				{
+					var text = string.IsNullOrEmpty(options.NotMigratedSqlExistsMessage)
 						? defaultNotMigratedSqlExistsMessage
 						: options.NotMigratedSqlExistsMessage.Replace("\\n", Environment.NewLine);
-				else
-					text = string.IsNullOrEmpty(options.AllMigratedMessage)
-						? defaultAllMigratedMessage
-						: options.AllMigratedMessage.Replace("\\n", Environment.NewLine);
-				var postJson = JsonConvert.SerializeObject(new
-				{
-					text,
-					attachments
-				});
 
-				using (var content = new StringContent(postJson, Encoding.UTF8, "application/json"))
-				{
-					httpClient.PostAsync(options.SlackWebhookUrl, content).Wait();
+					if (options.DryRun)
+					{
+						var mentionText = MentionRegex.Match(text).Groups[2].Captures[0].Value;
+						text = MentionRegex.Replace(text, $"`@{mentionText}` ");
+					}
+					var postJson = JsonConvert.SerializeObject(new
+					{
+						text,
+						attachments
+					});
+
+					using (var content = new StringContent(postJson, Encoding.UTF8, "application/json"))
+					{
+						httpClient.PostAsync(options.SlackWebhookUrl, content).Wait();
+					}
 				}
 			}
 
