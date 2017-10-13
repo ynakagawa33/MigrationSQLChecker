@@ -22,6 +22,9 @@ namespace MigrationSQLChecker
 		[Option('n', "notMigratedSqlExistsMessage", DefaultValue = "<!here|here> DB に未適用の migration SQL があります :no_good: ", HelpText = "未適用の migration SQL が存在している場合のメッセージを指定します。未指定の場合、 デフォルトのメッセージが選択されます。")]
 		public string NotMigratedSqlExistsMessage { get; set; }
 
+		[Option('a', "allMigratedMessage", HelpText = "全ての migration SQL が適用済みの場合のメッセージを指定します。未指定の場合、このメッセージの投稿をしません。")]
+		public string AllMigratedMessage { get; set; }
+
 		[Option("dryRun", DefaultValue = false, HelpText = "DryRun 実行します。指定された場合、 チームメンションしません。")]
 		public bool DryRun { get; set; }
 	}

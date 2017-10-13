@@ -152,9 +152,10 @@ from
 						defaultNotMigratedSqlExistsMessage = (string) optionAttribute.DefaultValue;
 					}
 				}
+				var text = string.Empty;
 				if (notAppliedMigrationSqlsGropedByDate.Any())
 				{
-					var text = string.IsNullOrEmpty(options.NotMigratedSqlExistsMessage)
+					text = string.IsNullOrEmpty(options.NotMigratedSqlExistsMessage)
 						? defaultNotMigratedSqlExistsMessage
 						: options.NotMigratedSqlExistsMessage.Replace("\\n", Environment.NewLine);
 
@@ -165,7 +166,17 @@ from
 					}
 
 					text += $" ({options.DbHost})";
+				}
+				else
+				{
+					if (!string.IsNullOrEmpty(options.AllMigratedMessage))
+					{
+						text = options.AllMigratedMessage.Replace("\\n", Environment.NewLine);
+					}
+				}
 
+				if (!string.IsNullOrEmpty(text))
+				{
 					var postJson = JsonConvert.SerializeObject(new
 					{
 						text,
