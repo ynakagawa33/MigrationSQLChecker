@@ -20,9 +20,6 @@ namespace MigrationSQLChecker
 		private const string NewsDbNodeIdentifier = "news";
 		private const string DemoDbNodeIdentifier = "demo";
 
-		private static readonly Regex MigrationSqlRegex =
-			new Regex($@"(.{{8}})(_|-)(.{{2}})(_|-)({AllNodeIdentifier}|{CommonDbNodeIdentifier}|{NewsDbNodeIdentifier}|{DataDbNodeIdentifier}|{DemoDbNodeIdentifier})(_|-)");
-
 		private static readonly Regex CommonDbAppliedMigrationSqlRegex =
 			new Regex($@".{{8}}(_|-).{{2}}(_|-)({AllNodeIdentifier}|{CommonDbNodeIdentifier}|{NewsDbNodeIdentifier})(_|-)");
 
@@ -63,97 +60,80 @@ from
 					.ToList();
 
 			IEnumerable<string> actualCommonDbAppliedMigrationSqls;
-			var commonDbConnectionStringBuilder = CreateConnectionStringBuilder(options.DbHost, options.DbUser, options.DbPassword, CommonDbNodeIdentifier);
+			var commonDbConnectionStringBuilder =
+				CreateConnectionStringBuilder(options.DbHost, options.DbUser, options.DbPassword, CommonDbNodeIdentifier);
 			using (var commonDbConnection = new NpgsqlConnection(commonDbConnectionStringBuilder))
 			{
 				actualCommonDbAppliedMigrationSqls = commonDbConnection.Query<string>(FindMigratedFileNameSql);
 			}
 			IEnumerable<string> actualDataDb1AppliedMigrationSqls;
-			var dataDb1ConnectionStringBuilder = CreateConnectionStringBuilder(options.DbHost, options.DbUser, options.DbPassword, DataDbNodeIdentifier + "1");
+			var dataDb1ConnectionStringBuilder = CreateConnectionStringBuilder(options.DbHost, options.DbUser,
+				options.DbPassword, DataDbNodeIdentifier + "1");
 			using (var dataDb1Connection = new NpgsqlConnection(dataDb1ConnectionStringBuilder))
 			{
 				actualDataDb1AppliedMigrationSqls = dataDb1Connection.Query<string>(FindMigratedFileNameSql);
 			}
 			IEnumerable<string> actualDataDb2AppliedMigrationSqls;
-			var dataDb2ConnectionStringBuilder = CreateConnectionStringBuilder(options.DbHost, options.DbUser, options.DbPassword, DataDbNodeIdentifier + "2");
+			var dataDb2ConnectionStringBuilder = CreateConnectionStringBuilder(options.DbHost, options.DbUser,
+				options.DbPassword, DataDbNodeIdentifier + "2");
 			using (var dataDbConnection = new NpgsqlConnection(dataDb2ConnectionStringBuilder))
 			{
 				actualDataDb2AppliedMigrationSqls = dataDbConnection.Query<string>(FindMigratedFileNameSql);
 			}
 
-			var commonDbNotAppliedMigrationSqls = expectedCommonDbAppliedMigrationSqls.Except(actualCommonDbAppliedMigrationSqls).ToList();
-			var dataDb1NotAppliedMigrationSqls = expectedDataDbAppliedMigrationSqls.Except(actualDataDb1AppliedMigrationSqls).ToList();
-			var dataDb2NotAppliedMigrationSqls = expectedDataDbAppliedMigrationSqls.Except(actualDataDb2AppliedMigrationSqls).ToList();
-
-			var notAppliedMigrationSqlsGropedByDate =
-				commonDbNotAppliedMigrationSqls
-					.Union(dataDb1NotAppliedMigrationSqls)
-					.Union(dataDb2NotAppliedMigrationSqls)
-					.GroupBy(s => MigrationSqlRegex.Match(s).Groups[1].Captures[0].Value)
-					.OrderBy(grouping => grouping.Key)
-					.ToList();
+			var commonDbNotAppliedMigrationSqls = expectedCommonDbAppliedMigrationSqls
+				.Except(actualCommonDbAppliedMigrationSqls)
+				.OrderBy(s => s)
+				.ToList();
+			var dataDb1NotAppliedMigrationSqls = expectedDataDbAppliedMigrationSqls
+				.Except(actualDataDb1AppliedMigrationSqls)
+				.OrderBy(s => s)
+				.ToList();
+			var dataDb2NotAppliedMigrationSqls = expectedDataDbAppliedMigrationSqls
+				.Except(actualDataDb2AppliedMigrationSqls)
+				.OrderBy(s => s)
+				.ToList();
 
 			var attachments = new List<dynamic>();
-			foreach (var notAppliedMigrationSqlGropedByDate in notAppliedMigrationSqlsGropedByDate)
-			{
-				var commonDbFieldValueSources = notAppliedMigrationSqlGropedByDate
-					.Where(s => commonDbNotAppliedMigrationSqls.Contains(s))
-					.OrderBy(s => s)
-					.ToList();
-				var dataDb1FieldValueSources = notAppliedMigrationSqlGropedByDate
-					.Where(s => dataDb1NotAppliedMigrationSqls.Contains(s))
-					.OrderBy(s => s)
-					.ToList();
-				var dataDb2FieldValueSources = notAppliedMigrationSqlGropedByDate
-					.Where(s => dataDb2NotAppliedMigrationSqls.Contains(s))
-					.OrderBy(s => s)
-					.ToList();
 
-				if (commonDbFieldValueSources.Any())
+			if (commonDbNotAppliedMigrationSqls.Any())
+				attachments.Add(new
 				{
-					attachments.Add(new
-					{
-						color = "danger",
-						title = commonDbConnectionStringBuilder.Database,
-						text = string.Join(Environment.NewLine, commonDbFieldValueSources.Select(s => $"`{s}`")),
-						mrkdwn_in = new[] { "text" }
-					});
-				}
-				if (dataDb1FieldValueSources.Any())
+					color = "danger",
+					title = commonDbConnectionStringBuilder.Database,
+					text = string.Join(Environment.NewLine, commonDbNotAppliedMigrationSqls.Select(s => $"`{s}`")),
+					mrkdwn_in = new[] {"text"}
+				});
+			if (dataDb1NotAppliedMigrationSqls.Any())
+				attachments.Add(new
 				{
-					attachments.Add(new
-					{
-						color = "danger",
-						title = dataDb1ConnectionStringBuilder.Database,
-						text = string.Join(Environment.NewLine, dataDb1FieldValueSources.Select(s => $"`{s}`")),
-						mrkdwn_in = new[] { "text" }
-					});
-				}
-				if (dataDb2FieldValueSources.Any())
+					color = "danger",
+					title = dataDb1ConnectionStringBuilder.Database,
+					text = string.Join(Environment.NewLine, dataDb1NotAppliedMigrationSqls.Select(s => $"`{s}`")),
+					mrkdwn_in = new[] {"text"}
+				});
+			if (dataDb2NotAppliedMigrationSqls.Any())
+				attachments.Add(new
 				{
-					attachments.Add(new
-					{
-						color = "danger",
-						title = dataDb2ConnectionStringBuilder.Database,
-						text = string.Join(Environment.NewLine, dataDb2FieldValueSources.Select(s => $"`{s}`")),
-						mrkdwn_in = new[] { "text" }
-					});
-				}
-			}
+					color = "danger",
+					title = dataDb2ConnectionStringBuilder.Database,
+					text = string.Join(Environment.NewLine, dataDb2NotAppliedMigrationSqls.Select(s => $"`{s}`")),
+					mrkdwn_in = new[] {"text"}
+				});
 
 			using (var httpClient = new HttpClient())
 			{
 				var defaultNotMigratedSqlExistsMessage = string.Empty;
 				foreach (var propertyInfo in typeof(Options).GetProperties())
-				{
 					if (propertyInfo.Name == nameof(Options.NotMigratedSqlExistsMessage))
 					{
 						var optionAttribute = (OptionAttribute) propertyInfo.GetCustomAttributes(typeof(OptionAttribute), false).Single();
 						defaultNotMigratedSqlExistsMessage = (string) optionAttribute.DefaultValue;
 					}
-				}
 				var text = string.Empty;
-				if (notAppliedMigrationSqlsGropedByDate.Any())
+				if (commonDbNotAppliedMigrationSqls.Any()
+				    || dataDb1NotAppliedMigrationSqls.Any()
+				    || dataDb2NotAppliedMigrationSqls.Any())
 				{
 					text = string.IsNullOrEmpty(options.NotMigratedSqlExistsMessage)
 						? defaultNotMigratedSqlExistsMessage
@@ -170,9 +150,7 @@ from
 				else
 				{
 					if (!string.IsNullOrEmpty(options.AllMigratedMessage))
-					{
 						text = options.AllMigratedMessage.Replace("\\n", Environment.NewLine);
-					}
 				}
 
 				if (!string.IsNullOrEmpty(text))
@@ -194,7 +172,8 @@ from
 			Environment.Exit(Environment.ExitCode);
 		}
 
-		private static NpgsqlConnectionStringBuilder CreateConnectionStringBuilder(string dbHost, string dbUser, string dbPassword, string nodeIdentifier)
+		private static NpgsqlConnectionStringBuilder CreateConnectionStringBuilder(string dbHost, string dbUser,
+			string dbPassword, string nodeIdentifier)
 		{
 			return new NpgsqlConnectionStringBuilder
 			{
