@@ -21,10 +21,10 @@ namespace MigrationSQLChecker
 		private const string DemoDbNodeIdentifier = "demo";
 
 		private static readonly Regex CommonDbAppliedMigrationSqlRegex =
-			new Regex($@".{{8}}(_|-).{{2}}(_|-)({AllNodeIdentifier}|{CommonDbNodeIdentifier}|{NewsDbNodeIdentifier})(_|-)");
+			new Regex($@"\d{{8}}(_|-)(\d{{2}}(_|-)){{0,1}}({AllNodeIdentifier}|{CommonDbNodeIdentifier}|{NewsDbNodeIdentifier})(_|-)");
 
 		private static readonly Regex DataDbAppliedMigrationSqlRegex =
-			new Regex($@".{{8}}(_|-).{{2}}(_|-)({AllNodeIdentifier}|{DataDbNodeIdentifier}|{DemoDbNodeIdentifier})(_|-)");
+			new Regex($@"\d{{8}}(_|-)(\d{{2}}(_|-)){{0,1}}({AllNodeIdentifier}|{DataDbNodeIdentifier}|{DemoDbNodeIdentifier})(_|-)");
 
 		private static readonly Regex MentionRegex = new Regex(@"<!(.*)\|(.*)> ");
 
